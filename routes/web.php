@@ -74,7 +74,7 @@ Route::middleware(['auth', 'role:Admin, AdminSD, AdminSMP'])->group(function () 
     Route::post('/import-token', [TokensImportController::class, 'import'])->name('tokens.import');
     Route::delete('/tokens/{id}', [TokensImportController::class, 'deleteUsers'])->name('tokens.delete');
     Route::put('/tokens/{id}', [TokensImportController::class, 'update'])->name('tokens.update');
-    Route::delete('/users', [TokensImportController::class, 'deleteUsers'])->name('users.delete.multiple');
+    Route::delete('/tokens', [TokensImportController::class, 'deleteUsers'])->name('tokens.delete.multiple');
     Route::post('/users/import', [UserImportController::class, 'import'])->name('users.import');
     Route::post('/users/store', [UserImportController::class, 'store'])->name('users.store');
     Route::get('/add-user', [UserImportController::class, 'users'])->name('add-users');

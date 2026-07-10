@@ -26,7 +26,7 @@ function ManageTokens() {
     const handleDeleteSelected = () => {
         if (selectedUsers.length > 0) {
             if (confirm(`Yakin hapus ${selectedUsers.length} user?`)) {
-                router.delete(route("users.delete.multiple"), {
+                router.delete(route("tokens.delete.multiple"), {
                     data: { ids: selectedUsers }, // kirim array id ke backend
                     onSuccess: () => {
                         alert("User berhasil dihapus!");
