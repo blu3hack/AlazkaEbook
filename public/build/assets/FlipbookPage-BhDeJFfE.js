@@ -1,0 +1,1 @@
+import{r,j as s}from"./app-DcE-8eof.js";import{P as t}from"./LazyPdfFlipbook-Dkov4y-G.js";import"./book-N4AgIs3g.js";const l=()=>{const[e]=r.useState();return s.jsx("div",{className:"bg-gray-100 min-h-screen w-screen flex flex-col items-center font-sans antialiased",children:s.jsx("div",{className:"w-full",children:s.jsx(t,{pdfUrl:e})})})};export{l as default};
