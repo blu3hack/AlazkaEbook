@@ -67,6 +67,11 @@ export default function Welcome({
                             </span>
                         </p>
 
+                        {/* Deploy test marker */}
+                        <p className="mb-6 text-center text-xs font-medium text-gray-400">
+                            Deploy test ✓ — {new Date().getFullYear()}
+                        </p>
+
                         {/* Login Button */}
                         <div className="flex justify-center">
                             <Link
