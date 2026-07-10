@@ -31,7 +31,9 @@ const PdfFlipbook = () => {
     const [loadedSnapshots, setLoadedSnapshots] = useState(null);
     const [isToggleOpen, setIsToggleOpen] = useState(false);
     const props = usePage().props;
-    const PDF_URL = `/pdf/${props.file_pdf}`;
+    // Diambil dari route ber-otorisasi (auth + token cocok dengan sesi),
+    // bukan path publik /pdf/ yang bisa diunduh siapa saja.
+    const PDF_URL = `/ebook-file/${encodeURIComponent(props.file_pdf ?? "")}`;
 
     // Resize listener
     useEffect(() => {

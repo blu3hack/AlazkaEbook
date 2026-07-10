@@ -23,9 +23,12 @@ class UserImportController extends Controller
 
         $users = DB::table('users')
             ->when($search, function ($query, $search) {
-                $query->where('Nama', 'like', '%' . $search . '%')
-                    ->orWhere('Kelas', 'like', '%' . $search . '%')
-                    ->orWhere('role', 'like', '%' . $search . '%');
+                // Bungkus dalam satu grup, jika tidak OR akan memutus filter kelas AdminSD/SMP.
+                $query->where(function ($q) use ($search) {
+                    $q->where('Nama', 'like', '%' . $search . '%')
+                        ->orWhere('Kelas', 'like', '%' . $search . '%')
+                        ->orWhere('role', 'like', '%' . $search . '%');
+                });
             })
             ->when($userRole === 'AdminSD', function ($query) use ($filterSD) {
                 $query->where(function ($q) use ($filterSD) {
@@ -69,6 +72,7 @@ class UserImportController extends Controller
         $request->validate([
             'Username' => 'required|unique:users,Username',
             'Password' => 'required',
+            'role'     => 'required|in:Siswa,AdminSD,AdminSMP,Admin',
         ]);
 
         $Kelas = $request->Kelas;
@@ -92,14 +96,18 @@ class UserImportController extends Controller
     {
         $request->validate([
             'Nama'  => 'required|string|max:255',
+            'role'  => 'required|in:Siswa,AdminSD,AdminSMP,Admin',
         ]);
 
         $Kelas = $request->Kelas;
         $Sub_Kelas = $request->Sub_kelas;
         $kelasGabungan = $Kelas . '' . $Sub_Kelas;
 
+        $allowed = $this->allowedKelas();
+
         DB::table('users')
             ->where('id', $id)
+            ->when($allowed, fn ($q) => $this->scopeKelas($q, $allowed))
             ->update([
                 'Nama'=> $request->input('Nama'),
                 'Username'=> $request->input('Username'),
@@ -114,18 +122,48 @@ class UserImportController extends Controller
 
     public function deleteUsers(Request $request, $id = null)
     {
+        $allowed = $this->allowedKelas();
+
         if ($id) {
-            // Hapus satu user
-            DB::table('users')->where('id', $id)->delete();
-            return redirect()->route('add-users')->with('success', 'Data berhasil dihapus!');
+            // Hapus satu user (dibatasi kelas yang boleh diakses admin ini)
+            DB::table('users')->where('id', $id)
+                ->when($allowed, fn ($q) => $this->scopeKelas($q, $allowed))
+                ->delete();
+            return redirect()->route('manage-user')->with('success', 'Data berhasil dihapus!');
         } else {
             // Hapus banyak user (kirim lewat request body)
             $ids = $request->input('ids', []);
             if (!empty($ids)) {
-                DB::table('users')->whereIn('id', $ids)->delete();
+                DB::table('users')->whereIn('id', $ids)
+                    ->when($allowed, fn ($q) => $this->scopeKelas($q, $allowed))
+                    ->delete();
             }
             return redirect()->route('manage-user')->with('success', 'Data berhasil dihapus!');
         }
+    }
+
+    /**
+     * Kelas yang boleh diakses admin saat ini. null = semua (Admin).
+     */
+    private function allowedKelas(): ?array
+    {
+        return match (Auth::user()->role) {
+            'AdminSD'  => ['4', '5', '6'],
+            'AdminSMP' => ['7', '8', '9'],
+            default    => null,
+        };
+    }
+
+    /**
+     * Batasi query hanya pada baris yang kelasnya termasuk $allowed.
+     */
+    private function scopeKelas($query, array $allowed)
+    {
+        return $query->where(function ($q) use ($allowed) {
+            foreach ($allowed as $kelas) {
+                $q->orWhere('Kelas', 'like', "%$kelas%");
+            }
+        });
     }
 
     public function manage(Request $request)
@@ -140,9 +178,12 @@ class UserImportController extends Controller
 
         $users = DB::table('users')
             ->when($search, function ($query, $search) {
-                $query->where('Nama', 'like', '%' . $search . '%')
-                    ->orWhere('Kelas', 'like', '%' . $search . '%')
-                    ->orWhere('role', 'like', '%' . $search . '%');
+                // Bungkus dalam satu grup, jika tidak OR akan memutus filter kelas AdminSD/SMP.
+                $query->where(function ($q) use ($search) {
+                    $q->where('Nama', 'like', '%' . $search . '%')
+                        ->orWhere('Kelas', 'like', '%' . $search . '%')
+                        ->orWhere('role', 'like', '%' . $search . '%');
+                });
             })
              ->when($userRole === 'AdminSD', function ($query) use ($filterSD) {
                 $query->where(function ($q) use ($filterSD) {

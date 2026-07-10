@@ -62,12 +62,30 @@ Route::middleware(['auth', 'role:Siswa'])->group(function () {
     ]);
 });
 
+    // Penyaji file PDF ebook. File disimpan privat di storage/app/ebooks dan
+    // hanya boleh diakses bila token yang divalidasi cocok dengan sesi user.
+    Route::get('/ebook-file/{file}', function (string $file) {
+        // basename() mencegah path traversal (mis. ../../.env)
+        $file = basename($file);
+
+        if (!session()->has('access_key') || session('file_pdf') !== $file) {
+            abort(403);
+        }
+
+        $path = storage_path('app/ebooks/' . $file);
+        abort_unless(is_file($path), 404);
+
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+        ]);
+    })->name('ebook.file');
+
 });
 
 // =================================================> Routing Untuk Role Admin <===========================================================
 
 // Route midleware untuk admin
-Route::middleware(['auth', 'role:Admin, AdminSD, AdminSMP'])->group(function () {
+Route::middleware(['auth', 'role:Admin,AdminSD,AdminSMP'])->group(function () {
     Route::get('/add-token', [TokensImportController::class, 'tokens'])->name('add-tokens');
     Route::get('/manage-token', [TokensImportController::class, 'manage'])->name('manage-token');
     Route::post('/add-tokens', [TokensImportController::class, 'store'])->name('tokens-store');

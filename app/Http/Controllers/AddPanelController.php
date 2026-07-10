@@ -20,6 +20,9 @@ class AddPanelController extends Controller
     public function Store(Request $request)
     {
        $request->validate([
+        // Kelas dibatasi alfanumerik agar tidak bisa dipakai path traversal
+        // (mis. "../../public") saat dijadikan bagian nama file.
+        'Kelas'  => 'required|alpha_num|max:10',
         'header' => 'required|image|mimes:jpg,jpeg,png|max:2048',
         'footer' => 'required|image|mimes:jpg,jpeg,png|max:2048',
         ]);
@@ -29,6 +32,13 @@ class AddPanelController extends Controller
         $footer = $request->file('footer');
         $headerName = 'header_' . $kelas  . '.' . $header->getClientOriginalExtension();
         $footerName = 'footer_' . $kelas  . '.' . $footer->getClientOriginalExtension();
+
+        // Buat folder tujuan bila belum ada
+        foreach (['header', 'footer'] as $dir) {
+            if (!file_exists(public_path($dir))) {
+                mkdir(public_path($dir), 0755, true);
+            }
+        }
 
         // Simpan file ke folder public
         $header->move(public_path('header'), $headerName);

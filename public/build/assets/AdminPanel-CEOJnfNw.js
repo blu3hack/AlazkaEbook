@@ -1,1 +1,0 @@
-import{j as r}from"./app-BLQPorN4.js";import e from"./Header-DBlzorCy.js";import s from"./Sidebar-CdTzSPp4.js";function i(){return r.jsxs("div",{className:"flex h-screen bg-gradient-to-br from-gray-900 to-blue-900",children:[r.jsx(s,{}),r.jsx("div",{className:"flex flex-1 flex-col",children:r.jsx(e,{})})]})}export{i as default};

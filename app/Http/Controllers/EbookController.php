@@ -56,17 +56,20 @@ class EbookController extends Controller
         $coverName = time() . '_cover_' . $cover->getClientOriginalName();
         $nameFile = $ebook . '_kelas' . $kelas . '.' . $file_pdf->getClientOriginalExtension();
 
-        // Buat folder jika belum ada
+        // Cover boleh publik (tidak sensitif); buat folder jika belum ada.
         if (!file_exists(public_path('cover'))) {
             mkdir(public_path('cover'), 0755, true);
         }
-        if (!file_exists(public_path('pdf'))) {
-            mkdir(public_path('pdf'), 0755, true);
+
+        // PDF disimpan di lokasi PRIVAT (di luar public/) supaya tidak bisa
+        // diakses langsung via URL. Penyajian lewat route ber-otorisasi.
+        $pdfDir = storage_path('app/ebooks');
+        if (!file_exists($pdfDir)) {
+            mkdir($pdfDir, 0755, true);
         }
 
-        // Simpan file ke folder public
         $cover->move(public_path('cover'), $coverName);
-        $file_pdf->move(public_path('pdf'), $nameFile);
+        $file_pdf->move($pdfDir, $nameFile);
 
         // Simpan ke database
         DB::table('ebook')->insert([
@@ -80,8 +83,6 @@ class EbookController extends Controller
         ]);
 
         return back()->with('success', 'File berhasil diupload!');
-        return back()->withErrors($e->errors())->withInput();
-
     }
 
     public function deleteUsers($id)

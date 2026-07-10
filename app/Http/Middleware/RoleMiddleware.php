@@ -15,8 +15,13 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        if (!in_array($request->user()->role, $roles)) {
-            // Kalau user tidak punya role yang sesuai
+        $user = $request->user();
+
+        // Trim tiap role agar "role:Admin, AdminSD" (dengan spasi) tetap cocok.
+        $roles = array_map('trim', $roles);
+
+        if (!$user || !in_array($user->role, $roles, true)) {
+            // Kalau belum login atau role tidak sesuai
             abort(403, 'Unauthorized');
         }
         return $next($request);

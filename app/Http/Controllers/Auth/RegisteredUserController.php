@@ -42,7 +42,9 @@ class RegisteredUserController extends Controller
             'username' => $request->username,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => 'admin',
+            // Least privilege: pendaftar publik TIDAK boleh langsung jadi admin.
+            // Role tinggi (Admin/AdminSD/AdminSMP) hanya boleh di-assign lewat panel admin.
+            'role' => 'Siswa',
         ]);
 
         event(new Registered($user));

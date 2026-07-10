@@ -22,11 +22,14 @@ class TokensImportController extends Controller
 
         $users = DB::table('token')
             ->when($search, function ($query, $search) {
-                $query->where('name', 'like', '%' . $search . '%')
-                    ->orWhere('unique_char', 'like', '%' . $search . '%')
-                    ->orWhere('token', 'like', '%' . $search . '%')
-                    ->orWhere('kelas', 'like', '%' . $search . '%')
-                    ->orWhere('ebook', 'like', '%' . $search . '%');
+                // Bungkus dalam satu grup, jika tidak OR akan memutus filter kelas AdminSD/SMP.
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('unique_char', 'like', '%' . $search . '%')
+                        ->orWhere('token', 'like', '%' . $search . '%')
+                        ->orWhere('kelas', 'like', '%' . $search . '%')
+                        ->orWhere('ebook', 'like', '%' . $search . '%');
+                });
             })
             ->when($userRole === 'AdminSD', function ($query) use ($filterSD) {
                 $query->where(function ($q) use ($filterSD) {
@@ -56,22 +59,13 @@ class TokensImportController extends Controller
 
     public function import(Request $request)
     {
-        // $request->validate([
-        //     'file' => 'required|file|mimes:xlsx,xls,csv|mimetypes:
-        //         application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
-        //         application/vnd.ms-excel,
-        //         text/csv
-        //     '
-        // ]);
-
         $request->validate([
-            'file' => 'required|file'
+            'file' => 'required|file|mimes:xlsx,xls,csv',
         ]);
 
         Excel::import(new TokensImport, $request->file('file'));
-        return back()->with('success', 'Excel berhasil diupload dan diproses!');
 
-        
+        return back()->with('success', 'Excel berhasil diupload dan diproses!');
     }
 
     public function store(Request $request)
@@ -118,8 +112,11 @@ class TokensImportController extends Controller
         $ebook = trim($request->input('Ebook'));
         $ebookName = $ebook . '_kelas' . $Kelas . '.pdf';
 
+        $allowed = $this->allowedKelas();
+
         DB::table('token')
             ->where('id', $id)
+            ->when($allowed, fn ($q) => $this->scopeKelas($q, $allowed))
             ->update([
                 'unique_char'=> $request->input('unique_char'),
                 'name'=> $request->input('Nama'),
@@ -135,18 +132,48 @@ class TokensImportController extends Controller
 
     public function deleteUsers(Request $request, $id = null)
     {
+        $allowed = $this->allowedKelas();
+
         if ($id) {
-            // Hapus satu user
-            DB::table('token')->where('id', $id)->delete();
-            return redirect()->route('add-token')->with('success', 'Data berhasil dihapus!');
+            // Hapus satu token (dibatasi kelas yang boleh diakses admin ini)
+            DB::table('token')->where('id', $id)
+                ->when($allowed, fn ($q) => $this->scopeKelas($q, $allowed))
+                ->delete();
+            return redirect()->route('manage-token')->with('success', 'Data berhasil dihapus!');
         } else {
-            // Hapus banyak user (kirim lewat request body)
+            // Hapus banyak token (kirim lewat request body)
             $ids = $request->input('ids', []);
             if (!empty($ids)) {
-                DB::table('token')->whereIn('id', $ids)->delete();
+                DB::table('token')->whereIn('id', $ids)
+                    ->when($allowed, fn ($q) => $this->scopeKelas($q, $allowed))
+                    ->delete();
             }
             return redirect()->route('manage-token')->with('success', 'Data berhasil dihapus!');
         }
+    }
+
+    /**
+     * Kelas yang boleh diakses admin saat ini. null = semua (Admin).
+     */
+    private function allowedKelas(): ?array
+    {
+        return match (Auth::user()->role) {
+            'AdminSD'  => ['4', '5', '6'],
+            'AdminSMP' => ['7', '8', '9'],
+            default    => null,
+        };
+    }
+
+    /**
+     * Batasi query hanya pada baris yang kelasnya termasuk $allowed.
+     */
+    private function scopeKelas($query, array $allowed)
+    {
+        return $query->where(function ($q) use ($allowed) {
+            foreach ($allowed as $kelas) {
+                $q->orWhere('kelas', 'like', "%$kelas%");
+            }
+        });
     }
 
     public function manage(Request $request)

@@ -14,43 +14,19 @@ class ClassEbookController extends Controller
         $userClass = Auth::user()->Kelas;
         $userID = Auth::user()->id;
 
-        $ebooks = DB::table('ebook')
-            ->when($userClass, function ($query, $userClass) {
-                if (str_contains($userClass, '4')) {
-                    $query->where('kelas', 4);
-                }
-                if (str_contains($userClass, '5')) {
-                    $query->where('kelas', 5);
-                }
-                if (str_contains($userClass, '6')) {
-                    $query->where('kelas', 6);
-                }
-                if (str_contains($userClass, '7')) {
-                    $query->where('kelas', 7);
-                }
-                if (str_contains($userClass, '8')) {
-                    $query->where('kelas', 8);
-                }
-                if (str_contains($userClass, '9')) {
-                    $query->where('kelas', 9);
-                }
-            })
-            ->get();
-
-        // 1. Pisahkan dengan koma atau spasi
-        $kelasParts = preg_split('/[\s,]+/', $userClass); // ["7A", "8C", "4", "5"]
-
-        // 2. Ambil angka saja
-        $kelasNumbers = array_map(function($part) {
+        // Ambil angka kelas dari string seperti "7A, 8C, 4" -> ["7", "8", "4"]
+        $kelasParts = preg_split('/[\s,]+/', (string) $userClass, -1, PREG_SPLIT_NO_EMPTY);
+        $kelasNumbers = array_values(array_filter(array_map(function ($part) {
             preg_match('/\d+/', $part, $matches);
             return $matches[0] ?? null;
-        }, $kelasParts);
+        }, $kelasParts)));
 
-        // 3. Hapus null jika ada
-        $kelasNumbers = array_filter($kelasNumbers);
+        // whereIn: siswa yang berada di beberapa kelas melihat SEMUA ebook kelasnya.
+        // (Sebelumnya di-AND sehingga siswa multi-kelas tidak mendapat ebook sama sekali.)
+        $ebooks = DB::table('ebook')
+            ->when($kelasNumbers, fn ($query) => $query->whereIn('kelas', $kelasNumbers))
+            ->get();
 
-        // 4. Reset index
-        $kelasNumbers = array_values($kelasNumbers);
         return Inertia::render('ClassEbook/PageClass', [
             'ebooks' => $ebooks,
             'class' => $kelasNumbers,
@@ -93,12 +69,15 @@ class ClassEbookController extends Controller
             ]);
         }
 
-        // Redirect dengan data di URL
-        return redirect('/flipbook')->with([
+        // Simpan grant di session PERSISTEN (bukan flash) supaya route penyaji
+        // PDF dan reload halaman flipbook tetap terotorisasi.
+        $request->session()->put([
             'access_key' => $validated['token'],
-            'id_nama' => $validated['id_nama'],
-            'file_pdf' => $validated['file_pdf'],
+            'id_nama'    => $validated['id_nama'],
+            'file_pdf'   => $validated['file_pdf'],
         ]);
+
+        return redirect('/flipbook');
 
     }
 

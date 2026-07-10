@@ -63,6 +63,45 @@ class DrawingController extends Controller
         ]);
 
         return response()->json(['ok' => true, 'id' => $drawing->id]);
-        
+
+    }
+
+    public function update(Request $request, Drawing $drawing)
+    {
+        // Cegah IDOR: hanya pemilik yang boleh mengubah gambarnya.
+        abort_unless($drawing->user_id === Auth::id(), 403);
+
+        $data = $request->validate([
+            'title' => 'nullable|string',
+            'data'  => 'required|array',
+        ]);
+
+        array_walk_recursive($data['data'], function (&$value, $key) {
+            if ($value === null || $value === "null") {
+                switch ($key) {
+                    case 'name':
+                        $value = "Untitled";
+                        break;
+                    case 'url':
+                        $value = "";
+                        break;
+                    case 'crop':
+                        $value = [
+                            "topLeft" => ["x" => 0, "y" => 0],
+                            "bottomRight" => ["x" => 1, "y" => 1],
+                        ];
+                        break;
+                    default:
+                        $value = "";
+                }
+            }
+        });
+
+        $drawing->update([
+            'title' => $data['title'] ?? $drawing->title,
+            'data'  => json_encode($data['data']),
+        ]);
+
+        return response()->json(['ok' => true, 'id' => $drawing->id]);
     }
 }
